@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:help.aliyun.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:pypi.org)",
+      "Bash(pip show:*)",
+      "Bash(python -c \"import dashscope; print\\(dashscope.__version__\\)\")",
+      "Bash(python:*)",
+      "WebFetch(domain:dashscope.aliyun.com)",
+      "WebFetch(domain:www.google.com)",
+      "WebFetch(domain:www.bing.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(conda run:*)",
+      "Bash(ls:*)",
+      "Bash(PYTHONIOENCODING=utf-8 \"E:/Anaconda/envs/YOLO/python.exe\" main.py)",
+      "Bash(E:/Anaconda/envs/YOLO/python.exe -c ':*)",
+      "Bash(PYTHONIOENCODING=utf-8 E:/Anaconda/envs/YOLO/python.exe:*)",
+      "Bash(\"E:/Anaconda/envs/YOLO/python.exe\" main.py)",
+      "Bash(conda activate:*)",
+      "Bash(E:\\\\Anaconda\\\\envs\\\\YOLO\\\\python.exe:*)",
+      "Bash(\"E:\\\\Anaconda\\\\envs\\\\YOLO\\\\python.exe\" main.py --video \"1.线性代数基础一.mp4\")",
+      "Bash('E:\\\\Anaconda\\\\envs\\\\YOLO\\\\python.exe' -c ':*)"
+    ]
+  }
+}
