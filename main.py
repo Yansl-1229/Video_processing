@@ -14,6 +14,8 @@ from steps.streaming_extract import extract_frames_with_similarity, deduplicate_
 from steps.extract_audio import extract_full_audio, split_audio_by_segments, split_video_by_segments
 from steps.transcribe import transcribe_audio
 from steps.summarize import summarize_transcripts
+from steps.match_ppt import process_filtered_frames, process_segments
+from steps.ppt_to_images import pdf_to_images
 
 
 def get_video_duration(video_path):
@@ -32,6 +34,10 @@ def main():
     parser.add_argument("--video", required=False, default=str(Path("1.线性代数基础一.mp4")), help="输入视频文件路径，默认 1.线性代数基础一.mp4")
     parser.add_argument("--step", type=float, default=3, help="帧提取间隔（秒），默认 0.5")
     parser.add_argument("--output", default="./output", help="输出目录，默认 ./output")
+    parser.add_argument("--ppt-pdf", default=None, help="PPT PDF 文件路径，提供后自动拆页为图片用于匹配")
+    parser.add_argument("--ppt-dir", default="./GAMES001-Lecture01_pages", help="PPT 图片目录（若提供 --ppt-pdf 则自动设置）")
+    parser.add_argument("--min-similarity", type=float, default=0.9,
+                        help="最小相似度阈值，低于此值保留原始帧 (默认 0.0)")
     args = parser.parse_args()
 
     video_path = Path(args.video)
@@ -65,11 +71,43 @@ def main():
     print(f"{'='*60}")
     t0 = time.time()
     segments = deduplicate_and_segment(
-        str(csv_path), str(frames_dir), str(filtered_dir), str(segments_dir)
+        str(csv_path), str(frames_dir), str(filtered_dir), str(segments_dir), dup_threshold=0.8, threshold_low=0.6, min_gap=15, min_duration_s=60
     )
     print(f"  切分为 {len(segments)} 个页面 ({time.time()-t0:.1f}s)")
     for i, seg in enumerate(segments):
         print(f"    第 {i+1} 页: {len(seg)} 帧")
+
+    # ========== Step 2.5: PPT PDF 拆页 ==========
+    if args.ppt_pdf:
+        pdf_path = Path(args.ppt_pdf)
+        if pdf_path.exists():
+            print(f"\n{'='*60}")
+            print(f"Step 2.5a: 将 PPT PDF 拆页为图片")
+            print(f"{'='*60}")
+            t0 = time.time()
+            pdf_to_images(str(pdf_path))
+            ppt_dir = pdf_path.parent / f"{pdf_path.stem}_pages"
+            print(f"  PDF 拆页完成，图片保存在: {ppt_dir} ({time.time()-t0:.1f}s)")
+        else:
+            print(f"\n警告: PPT PDF 文件不存在: {pdf_path}，跳过")
+            ppt_dir = Path(args.ppt_dir)
+    else:
+        ppt_dir = Path(args.ppt_dir)
+
+    # ========== Step 2.5b: 帧图片替换为PPT图片 ==========
+    ppt_dir = Path(ppt_dir)
+    if ppt_dir.exists():
+        print(f"\n{'='*60}")
+        print(f"Step 2.5: 将帧图片替换为最相似的PPT图片")
+        print(f"{'='*60}")
+        t0 = time.time()
+        # 处理 filtered 目录
+        process_filtered_frames(str(output_dir), str(ppt_dir), min_similarity=args.min_similarity)
+        # 处理 segments 目录
+        process_segments(str(output_dir), str(ppt_dir), min_similarity=args.min_similarity)
+        print(f"  PPT 匹配完成 ({time.time()-t0:.1f}s)")
+    else:
+        print(f"\n警告: PPT 目录不存在，跳过 PPT 匹配: {ppt_dir}")
 
     # ========== Step 3: 提取音频并切分 ==========
     print(f"\n{'='*60}")

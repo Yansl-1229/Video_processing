@@ -139,7 +139,7 @@ def extract_frames_with_similarity(video_path, output_dir, step_seconds=0.5,
 
 
 def deduplicate_and_segment(csv_path, frames_dir, output_dir, segments_dir,
-                             dup_threshold=0.99, threshold_low=0.62,
+                             dup_threshold=0.9, threshold_low=0.62,
                              min_gap=15, min_duration_s=60):
     """合并：去重 + PPT 页面切分。读取 CSV，输出 filtered 帧和 segments 列表。
 

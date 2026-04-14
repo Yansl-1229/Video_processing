@@ -21,7 +21,14 @@
       "Bash(conda activate:*)",
       "Bash(E:\\\\Anaconda\\\\envs\\\\YOLO\\\\python.exe:*)",
       "Bash(\"E:\\\\Anaconda\\\\envs\\\\YOLO\\\\python.exe\" main.py --video \"1.线性代数基础一.mp4\")",
-      "Bash('E:\\\\Anaconda\\\\envs\\\\YOLO\\\\python.exe' -c ':*)"
+      "Bash('E:\\\\Anaconda\\\\envs\\\\YOLO\\\\python.exe' -c ':*)",
+      "Bash(/c/Users/Yansl/miniconda3/envs/YOLO/python.exe -c ':*)",
+      "Bash(where python:*)",
+      "Bash(/d/Users/Yansl/anaconda3/envs/YOLO/python.exe -c ':*)",
+      "Read(//d/Users/Yansl/anaconda3/envs//**)",
+      "Read(//d/Users/Yansl/anaconda3/envs/**)",
+      "Read(//c/Users/Yansl/miniconda3/**)",
+      "Bash(D:/Users/Yansl/anaconda3/Scripts/conda.exe env:*)"
     ]
   }
 }

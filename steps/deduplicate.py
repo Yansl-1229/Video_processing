@@ -4,7 +4,7 @@ import os
 import shutil
 
 
-def deduplicate_frames(csv_path, frames_dir, output_dir, threshold=0.99):
+def deduplicate_frames(csv_path, frames_dir, output_dir, threshold=0.9):
     """读取相似度 CSV，去除相似度 > threshold 的重复帧，复制非重复帧到 output_dir。
 
     Returns: list of kept image filenames (in order)
