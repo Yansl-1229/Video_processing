@@ -16,6 +16,7 @@ from steps.transcribe import transcribe_audio
 from steps.summarize import summarize_transcripts
 from steps.match_ppt import process_filtered_frames, process_segments
 from steps.ppt_to_images import pdf_to_images
+from steps.generate_document import generate_document
 
 
 def get_video_duration(video_path):
@@ -32,10 +33,10 @@ def get_video_duration(video_path):
 def main():
     parser = argparse.ArgumentParser(description="PPT 讲解视频处理系统")
     parser.add_argument("--video", required=False, default=str(Path("1.线性代数基础一.mp4")), help="输入视频文件路径，默认 1.线性代数基础一.mp4")
-    parser.add_argument("--step", type=float, default=3, help="帧提取间隔（秒），默认 0.5")
+    parser.add_argument("--step", type=float, default=2, help="帧提取间隔（秒），默认 0.5")
     parser.add_argument("--output", default="./output", help="输出目录，默认 ./output")
-    parser.add_argument("--ppt-pdf", default=None, help="PPT PDF 文件路径，提供后自动拆页为图片用于匹配")
-    parser.add_argument("--ppt-dir", default="./GAMES001-Lecture01_pages", help="PPT 图片目录（若提供 --ppt-pdf 则自动设置）")
+    parser.add_argument("--ppt-pdf", default="./GAMES001-Lecture01.pdf", help="PPT PDF 文件路径，提供后自动拆页为图片用于匹配")
+    parser.add_argument("--ppt-dir",  help="PPT 图片目录（若提供 --ppt-pdf 则自动设置）")
     parser.add_argument("--min-similarity", type=float, default=0.9,
                         help="最小相似度阈值，低于此值保留原始帧 (默认 0.0)")
     args = parser.parse_args()
@@ -133,7 +134,7 @@ def main():
 
     # ========== Step 4: 语音转文字 ==========
     print(f"\n{'='*60}")
-    print("Step 4: 语音转文字 (qwen3-omni-flash)")
+    print("Step 4: 语音转文字 (qwen3.5-omni-flash)")
     print(f"{'='*60}")
     transcripts = []
     for idx, audio_path in audio_segments:
@@ -175,6 +176,16 @@ def main():
     summarize_segments(segments_dir, api_key=api_key)
     print(f"  逐页知识点提取完成 ({time.time()-t0:.1f}s)")
 
+    # ========== Step 7: 生成多模态文档 ==========
+    print(f"\n{'='*60}")
+    print("Step 7: 生成多模态课程文档")
+    print(f"{'='*60}")
+    t0 = time.time()
+    doc_path = generate_document(
+        str(output_dir), segments_dir=str(segments_dir), segments=segments
+    )
+    print(f"  多模态文档已生成: {doc_path} ({time.time()-t0:.1f}s)")
+
     print(f"\n{'='*60}")
     print("处理完成!")
     print(f"{'='*60}")
@@ -185,6 +196,7 @@ def main():
     print(f"  全部转录:    {all_transcripts_path}")
     print(f"  课程总结:    {summary_path}")
     print(f"  逐页知识点:  segments/*/segment_summary.md")
+    print(f"  多模态文档:  {doc_path}")
 
 
 if __name__ == "__main__":

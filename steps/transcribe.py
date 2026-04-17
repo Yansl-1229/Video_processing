@@ -1,14 +1,14 @@
-"""使用 qwen3-omni-flash 将音频转录为文字"""
+"""使用 qwen3.5-omni-flash 将音频转录为文字"""
 import base64
 import math
 import os
 import shutil
 import subprocess
 
-# DashScope API 的 base64 data-URI 大小限制：10MB
-MAX_BASE64_BYTES = 10_000_000
 # WAV 16kHz 16bit 单声道：每秒字节数 = 16000 * 2 = 32000
 WAV_BYTES_PER_SEC = 32_000
+# 每段音频最大秒数，避免单段过长
+MAX_CHUNK_SEC = 200
 
 
 def _encode_audio_base64(audio_path):
@@ -34,30 +34,17 @@ def _get_ffmpeg():
 
 
 def _split_audio_file(audio_path):
-    """如果音频文件过大，使用 ffmpeg 切分为多段。
-
-    每段时长自适应，确保 base64 编码后不超过 API 限制。
-    """
-    file_size = os.path.getsize(audio_path)
-    b64_size = file_size * 4 / 3
-
-    if b64_size <= MAX_BASE64_BYTES:
-        return [audio_path]
-
-    # base64 开销 4/3，每秒 WAV 有 WAV_BYTES_PER_SEC 字节
-    # 每段最大秒数 = MAX_BASE64_BYTES / (4/3) / WAV_BYTES_PER_SEC
-    max_chunk_s = int(MAX_BASE64_BYTES * 3 / 4 / WAV_BYTES_PER_SEC)  # ≈ 234s，取保守值
-
+    """如果音频文件过长，使用 ffmpeg 切分为多段。"""
     duration = _get_audio_duration(audio_path)
-    if duration <= max_chunk_s:
+    if duration <= MAX_CHUNK_SEC:
         return [audio_path]
 
     ffmpeg_bin = _get_ffmpeg()
-    n_chunks = math.ceil(duration / max_chunk_s)
+    n_chunks = math.ceil(duration / MAX_CHUNK_SEC)
     chunks = []
     for i in range(n_chunks):
-        start = i * max_chunk_s
-        end = min((i + 1) * max_chunk_s, duration)
+        start = i * MAX_CHUNK_SEC
+        end = min((i + 1) * MAX_CHUNK_SEC, duration)
         duration_s = end - start
         chunk_path = audio_path.replace(".wav", f"_chunk{i:02d}.wav")
         cmd = [
@@ -76,7 +63,7 @@ def _split_audio_file(audio_path):
 
 
 def transcribe_audio(audio_path, api_key=None):
-    """使用 qwen3-omni-flash 转录音频为文字。
+    """使用 qwen3.5-omni-flash 转录音频为文字。
 
     对于长音频会自动分段处理。
     Returns: 转录的文字
@@ -95,7 +82,7 @@ def transcribe_audio(audio_path, api_key=None):
                 {"text": "请将这段音频中的语音内容完整转录为文字。只输出转录结果，不要添加任何额外说明。"}
             ]
         }]
-        kwargs = {"model": "qwen3-omni-flash", "messages": messages}
+        kwargs = {"model": "qwen3.5-omni-flash", "messages": messages}
         if api_key:
             kwargs["api_key"] = api_key
         response = MultiModalConversation.call(**kwargs)

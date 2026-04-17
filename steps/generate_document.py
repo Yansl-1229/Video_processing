@@ -15,17 +15,45 @@ def _promote_headings(text: str, levels: int = 1) -> str:
     return re.sub(r'^(#{1,6})(\s+.+)$', _replace, text, flags=re.MULTILINE)
 
 
-def generate_document(output_dir: str) -> str:
+def _frame_time_ms(frame_path: str) -> int:
+    """从帧文件名中提取毫秒时间戳，如 frame_000009000.png → 9000。"""
+    stem = Path(frame_path).stem  # frame_000009000
+    parts = stem.rsplit("_", 1)
+    if len(parts) == 2:
+        try:
+            return int(parts[1])
+        except ValueError:
+            pass
+    return 0
+
+
+def _format_time(ms: int) -> str:
+    """将毫秒转为 HH:MM:SS 或 MM:SS 格式。"""
+    total_seconds = ms // 1000
+    h = total_seconds // 3600
+    m = (total_seconds % 3600) // 60
+    s = total_seconds % 60
+    if h > 0:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+
+def generate_document(output_dir: str, segments_dir: str = None, segments: list = None) -> str:
     """读取 output 目录中的所有结果，生成一份多模态 Markdown 文档。
 
     Args:
         output_dir: 输出目录路径，包含 summary.md 和 segments/ 子目录。
+        segments_dir: segments 目录路径，如果为 None 则自动从 output_dir 推导。
+        segments: 来自 deduplicate_and_segment() 的 list[list[str]]，用于提取起始时间。
+                  如果为 None 则跳过起始时间标注。
 
     Returns:
-        生成的文档写入 output_dir/course_document.md，同时返回文档内容。
+        生成的文档写入 output_dir/course_document.md，返回文档文件路径。
     """
     output_path = Path(output_dir)
-    segments_dir = output_path / "segments"
+    if segments_dir is None:
+        segments_dir = output_path / "segments"
+    segments_path = Path(segments_dir)
     lines: list[str] = []
 
     # ---- 文档标题 ----
@@ -35,7 +63,6 @@ def generate_document(output_dir: str) -> str:
     summary_path = output_path / "summary.md"
     if summary_path.exists():
         summary_text = summary_path.read_text(encoding="utf-8").strip()
-        # summary.md 自带 # 课程总结 / # 知识点列表，提升一级使其成为子章节
         lines.append(_promote_headings(summary_text))
         lines.append("")
     else:
@@ -45,9 +72,9 @@ def generate_document(output_dir: str) -> str:
     lines.append("---\n")
 
     # ---- 逐个 segment ----
-    if segments_dir.exists():
+    if segments_path.exists():
         seg_dirs = sorted(
-            [d for d in segments_dir.iterdir() if d.is_dir()],
+            [d for d in segments_path.iterdir() if d.is_dir()],
             key=lambda d: d.name,
         )
 
@@ -58,21 +85,34 @@ def generate_document(output_dir: str) -> str:
             except ValueError:
                 page_num = seg_name
 
-            lines.append(f"## 第 {page_num} 页\n")
+            # -- 起始时间 --
+            start_time_str = ""
+            if segments is not None:
+                try:
+                    seg_idx = int(seg_name)
+                    if 0 <= seg_idx < len(segments) and segments[seg_idx]:
+                        first_frame = segments[seg_idx][0]
+                        start_ms = _frame_time_ms(first_frame)
+                        start_time_str = f"（起始时间: {_format_time(start_ms)}）"
+                except (ValueError, IndexError):
+                    pass
+
+            lines.append(f"## 第 {page_num} 页 {start_time_str}\n")
 
             # -- segment_summary.md --
             seg_summary_path = seg_dir / "segment_summary.md"
             if seg_summary_path.exists():
                 seg_text = seg_summary_path.read_text(encoding="utf-8").strip()
-                # 提升标题级别（原文 # → ##，## → ###）
                 lines.append(_promote_headings(seg_text))
                 lines.append("")
 
-            # -- 帧图片 --
-            frames_dir = seg_dir / "frames"
-            if frames_dir.exists():
+            # -- 帧图片（优先使用 frames_ppt） --
+            frames_ppt_dir = seg_dir / "frames_ppt"
+            frames_orig_dir = seg_dir / "frames"
+            img_dir = frames_ppt_dir if frames_ppt_dir.exists() else frames_orig_dir
+            if img_dir.exists():
                 frame_files = sorted(
-                    f for f in frames_dir.iterdir()
+                    f for f in img_dir.iterdir()
                     if f.suffix.lower() == ".png"
                 )
                 if frame_files:
@@ -99,8 +139,7 @@ def generate_document(output_dir: str) -> str:
     doc = "\n".join(lines)
     out_path = output_path / "course_document.md"
     out_path.write_text(doc, encoding="utf-8")
-    print(f"多模态文档已生成: {out_path}")
-    return doc
+    return str(out_path)
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ Pipeline 是一系列数据转换步骤，每步读写文件系统：
 1. **流式帧提取 + CLIP 相似度** (`steps/streaming_extract.py`) — 单次遍历视频，帧提取和 CLIP 编码在同一循环中完成（不写 PNG 再读回），输出 `frames/` 和 `adjacent_similarity.csv`
 2. **去重 + PPT 页面切分** (`steps/streaming_extract.py`) — 读取 CSV，去除重复帧（>0.99），按低相似度（<0.62）切分为 PPT 页面，过滤短片段（<60s 合并），段内再去重，输出 `filtered/` 和 `segments/`
 3. **音频/视频切分** (`steps/extract_audio.py`) — moviepy 提取完整音频，ffmpeg 切分音频和视频
-4. **语音转录** (`steps/transcribe.py`) — `qwen3-omni-flash`，base64 编码音频，DashScope 原生 API；长音频自动分段
+4. **语音转录** (`steps/transcribe.py`) — `qwen3.5-omni-flash`，OpenAI 兼容接口，base64 编码音频；长音频自动分段
 5. **总结** (`steps/summarize.py`) — `qwen3-max`，拼接所有转录文本，生成总结和知识点列表
 
 ### 性能优化说明
@@ -71,7 +71,7 @@ Pipeline 是一系列数据转换步骤，每步读写文件系统：
 
 ### API 调用方式
 
-- 语音转录：`dashscope.MultiModalConversation.call(model="qwen3-omni-flash")`，音频以 base64 data URL 传入
+- 语音转录：`openai.OpenAI` 兼容接口，`model="qwen3.5-omni-flash"`，`modalities=["text"]`，音频以 base64 传入 `input_audio`
 - 文本总结：`dashscope.Generation.call(model="qwen3-max")`
 
 ## Legacy Files
