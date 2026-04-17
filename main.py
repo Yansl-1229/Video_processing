@@ -71,7 +71,7 @@ def main():
     print("Step 2: 去重 + 按 PPT 页面切分")
     print(f"{'='*60}")
     t0 = time.time()
-    segments = deduplicate_and_segment(
+    segments, segment_time_ranges = deduplicate_and_segment(
         str(csv_path), str(frames_dir), str(filtered_dir), str(segments_dir), dup_threshold=0.8, threshold_low=0.6, min_gap=15, min_duration_s=60
     )
     print(f"  切分为 {len(segments)} 个页面 ({time.time()-t0:.1f}s)")
@@ -122,13 +122,13 @@ def main():
 
     t0 = time.time()
     audio_segments = split_audio_by_segments(
-        str(full_audio_path), segments, str(audio_dir), video_duration_s=video_duration
+        str(full_audio_path), segment_time_ranges, str(audio_dir), video_duration_s=video_duration
     )
     print(f"  切分为 {len(audio_segments)} 段音频 ({time.time()-t0:.1f}s)")
 
     t0 = time.time()
     split_video_by_segments(
-        str(video_path), segments, str(segments_dir), video_duration_s=video_duration
+        str(video_path), segment_time_ranges, str(segments_dir), video_duration_s=video_duration
     )
     print(f"  切分为 {len(segments)} 段视频 ({time.time()-t0:.1f}s)")
 

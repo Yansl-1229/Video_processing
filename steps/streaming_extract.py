@@ -138,6 +138,15 @@ def extract_frames_with_similarity(video_path, output_dir, step_seconds=0.5,
     return frame_paths, csv_path, len(similarities)
 
 
+def _parse_frame_timestamp_ms(frame_path):
+    """从帧文件名 (frame_NNNNNNNNN.png) 中解析毫秒时间戳"""
+    name = os.path.basename(frame_path)
+    match = re.search(r"frame_(\d+)", name)
+    if match:
+        return int(match.group(1))
+    return 0
+
+
 def deduplicate_and_segment(csv_path, frames_dir, output_dir, segments_dir,
                              dup_threshold=0.9, threshold_low=0.62,
                              min_gap=15, min_duration_s=60):
@@ -154,7 +163,9 @@ def deduplicate_and_segment(csv_path, frames_dir, output_dir, segments_dir,
         min_duration_s: 最小片段时长（秒）
 
     Returns:
-        segments: list of lists, each inner list is frame file paths for one PPT page
+        (segments, segment_time_ranges):
+            segments: list of lists, each inner list is frame file paths for one PPT page
+            segment_time_ranges: list of (start_ms, end_ms)，end_ms 为 None 表示到视频末尾
     """
     # 第一遍：读取 CSV，识别重复帧和切分点
     duplicates = set()
@@ -231,7 +242,19 @@ def deduplicate_and_segment(csv_path, frames_dir, output_dir, segments_dir,
             if os.path.exists(p):
                 shutil.copy2(p, dst)
 
-    return segments
+    # 构建全局连续时间范围，确保音视频切分无间隙、无重叠
+    segment_time_ranges = []
+    for idx, seg_paths in enumerate(segments):
+        start_ms = _parse_frame_timestamp_ms(seg_paths[0])
+        if idx < len(segments) - 1:
+            # 非最后一个 segment：结束时间 = 下一个 segment 第一帧的时间戳
+            end_ms = _parse_frame_timestamp_ms(segments[idx + 1][0])
+        else:
+            # 最后一个 segment：结束时间由调用方用视频总时长决定
+            end_ms = None
+        segment_time_ranges.append((start_ms, end_ms))
+
+    return segments, segment_time_ranges
 
 
 # --- 以下函数从 split_segments.py 复用 ---

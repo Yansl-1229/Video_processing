@@ -1,18 +1,7 @@
 """从视频中提取音频，并按时间段切分为每段对应一个 PPT 页面"""
 import os
-import re
 import subprocess
-import tempfile
 from pathlib import Path
-
-
-def _parse_frame_timestamp_ms(frame_path):
-    """从帧文件名 (frame_NNNNNNNNN.png) 中解析毫秒时间戳"""
-    name = os.path.basename(frame_path)
-    match = re.search(r"frame_(\d+)", name)
-    if match:
-        return int(match.group(1))
-    return 0
 
 
 def extract_full_audio(video_path, output_path):
@@ -30,12 +19,12 @@ def extract_full_audio(video_path, output_path):
     return audio_duration
 
 
-def split_audio_by_segments(audio_path, segments, output_dir, video_duration_s=None):
-    """按 segment 的时间范围切分音频，使用 ffmpeg subprocess 切分。
+def split_audio_by_segments(audio_path, segment_time_ranges, output_dir, video_duration_s=None):
+    """按全局时间范围切分音频，使用 ffmpeg subprocess 切分。
 
     Args:
         audio_path: 完整音频文件路径
-        segments: list of segments, each segment is a list of frame file paths
+        segment_time_ranges: list of (start_ms, end_ms)，end_ms 为 None 表示到视频末尾
         output_dir: 输出目录
         video_duration_s: 视频总时长(秒)，用于计算最后一个 segment 的结束时间
 
@@ -56,16 +45,9 @@ def split_audio_by_segments(audio_path, segments, output_dir, video_duration_s=N
     os.makedirs(output_dir, exist_ok=True)
     results = []
 
-    for idx, frame_paths in enumerate(segments):
-        if not frame_paths:
-            continue
-        start_ms = _parse_frame_timestamp_ms(frame_paths[0])
-        end_ms = _parse_frame_timestamp_ms(frame_paths[-1])
-        # 给最后一个 segment 加一段缓冲
-        if idx == len(segments) - 1 and video_duration_s:
-            end_ms = min(end_ms + 1000, int(video_duration_s * 1000))
-        else:
-            end_ms = end_ms + 500  # 半秒缓冲
+    for idx, (start_ms, end_ms) in enumerate(segment_time_ranges):
+        if end_ms is None:
+            end_ms = int(video_duration_s * 1000) if video_duration_s else start_ms + 1
 
         start_s = start_ms / 1000.0
         end_s = end_ms / 1000.0
@@ -91,12 +73,12 @@ def split_audio_by_segments(audio_path, segments, output_dir, video_duration_s=N
     return results
 
 
-def split_video_by_segments(video_path, segments, output_dir, video_duration_s=None):
-    """按 segment 的时间范围切分视频，使用 ffmpeg subprocess 切分。
+def split_video_by_segments(video_path, segment_time_ranges, output_dir, video_duration_s=None):
+    """按全局时间范围切分视频，使用 ffmpeg subprocess 切分。
 
     Args:
         video_path: 原始视频文件路径
-        segments: list of segments, each segment is a list of frame file paths
+        segment_time_ranges: list of (start_ms, end_ms)，end_ms 为 None 表示到视频末尾
         output_dir: 输出目录 (output/segments)
         video_duration_s: 视频总时长(秒)
     """
@@ -108,15 +90,9 @@ def split_video_by_segments(video_path, segments, output_dir, video_duration_s=N
     except ImportError:
         ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
 
-    for idx, frame_paths in enumerate(segments):
-        if not frame_paths:
-            continue
-        start_ms = _parse_frame_timestamp_ms(frame_paths[0])
-        end_ms = _parse_frame_timestamp_ms(frame_paths[-1])
-        if idx == len(segments) - 1 and video_duration_s:
-            end_ms = min(end_ms + 1000, int(video_duration_s * 1000))
-        else:
-            end_ms = end_ms + 500
+    for idx, (start_ms, end_ms) in enumerate(segment_time_ranges):
+        if end_ms is None:
+            end_ms = int(video_duration_s * 1000) if video_duration_s else start_ms + 1
 
         start_s = start_ms / 1000.0
         end_s = end_ms / 1000.0
