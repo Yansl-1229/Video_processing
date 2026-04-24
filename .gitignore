@@ -3,3 +3,6 @@ output[0-9]*/
 Video_processing_results
 output
 GAMES001-Lecture01_pages
+*.pyc
+__pycache__/
+steps\__pycache__/

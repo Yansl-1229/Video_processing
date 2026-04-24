@@ -198,7 +198,7 @@ def process_filtered_frames(output_dir, ppt_dir, dup_threshold=0.99,
     match_frames_to_ppt(filtered_dir, ppt_dir, filtered_ppt_dir, dup_threshold, min_similarity, device)
 
 
-def process_segments(output_dir, ppt_dir, dup_threshold=0.99,
+def process_segments(output_dir, ppt_dir, dup_threshold=0.9,
                       min_similarity=0.0, device=None):
     """处理 output/segments 目录下所有 segment 的帧图片
 

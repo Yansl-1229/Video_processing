@@ -33,7 +33,11 @@
       "Bash(awk -F',' 'NR>=2{v=$3; if\\(v>0.8\\) print NR+1\": \"v}' output/adjacent_similarity.csv)",
       "Bash(D:/Users/Yansl/anaconda3/envs/YOLO/python.exe *)",
       "Bash(conda env *)",
-      "Bash(E:/Anaconda/envs/YOLO/python.exe *)"
+      "Bash(E:/Anaconda/envs/YOLO/python.exe *)",
+      "Bash(C:/Users/Yansl/miniconda3/envs/YOLO/python.exe *)",
+      "Bash(/c/Users/Yansl/miniconda3/envs/YOLO/python.exe *)",
+      "Bash(D:/Users/Yansl/anaconda3/python.exe *)",
+      "Bash(curl -s --max-time 10 https://dashscope.aliyuncs.com/api/v1 -o /dev/null -w \"%{http_code}\")"
     ]
   }
 }

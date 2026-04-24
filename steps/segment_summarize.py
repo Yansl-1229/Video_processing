@@ -2,8 +2,9 @@
 import os
 import re
 from pathlib import Path
-
+from dashscope import Generation,MultiModalConversation
 import dashscope
+dashscope.base_http_api_url = 'https://dashscope.aliyuncs.com/api/v1'
 
 
 def _get_segment_start_time(seg_dir):
@@ -44,31 +45,61 @@ def _summarize_single(text, page_num, start_time_s=None, api_key=None):
         formatted = _format_time(start_time_s)
         time_info = f"- **原视频时间点**: {formatted}\n"
 
-    prompt = (
-        "以下是一段课程讲解的转录文本，请从中提取：\n"
-        "1. **知识点**：该段涉及的核心概念和知识点，以编号列表形式呈现\n"
-        "2. **知识点内容描述**：对每个知识点用50-150字描述其具体内容和含义\n\n"
-        "注意：如果转录文本中未包含任何可提取的知识点，请在知识点和知识点内容描述部分均输出\"无\"。\n\n"
-        "请用以下 Markdown 格式输出：\n\n"
-        f"# 第 {page_num} 页 - 知识点与讲解摘要\n\n"
-        f"{time_info}"
-        "## 知识点\n"
-        "无\n\n"
-        "## 知识点内容描述\n"
-        "无\n\n"
-        f"转录文本：\n{text}"
-    )
+    prompt = f"""
+# Role
+你是一位专业的课程内容分析师和教育摘要专家。你擅长从冗长的课程转录文本中提取关键信息，并将其整理为结构清晰、易于理解的知识点摘要。
+
+# Task
+请阅读提供的【转录文本】，分析其中的教学内容，并严格按照指定的 Markdown 格式输出该页面的知识点与讲解摘要。
+
+# Inputs
+- **页码**: {page_num}
+- **时间信息**: {time_info}
+- **转录文本**: {text}
+
+
+# Constraints & Guidelines
+1. **内容提取**：忽略口语化的填充词（如“呃”、“那个”）、重复语句和无关闲聊，只保留核心教学内容和逻辑。
+2. **结构清晰**：将内容归纳为若干个核心知识点，每个知识点需包含标题和详细解释。
+3. **语言风格**：使用专业、简洁的教学语言，对原文进行适当的润色和总结，而非简单的复制粘贴。
+4. **格式严格**：必须严格遵守下方的【Output Format】，不要添加任何额外的开场白或结束语。
+
+# Output Format
+请完全按照以下模板输出（不要修改标题层级）：
+
+# 第 {page_num} 节 - 知识点与讲解摘要
+
+{time_info}
+
+一、核心讲解知识点
+（一）[知识点名称]
+[此处填写该知识点的详细讲解内容，包括定义、原理、案例等]
+
+（二）[知识点名称]
+[此处填写该知识点的详细讲解内容]
+
+......（根据实际内容数量列出所有知识点）
+
+二、整体内容概要总结
+[用简练的语言概括本页内容的中心思想或教学目标，字数控制在300-500字左右]
+"""
+
+    messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": prompt},
+    ]
+    
     kwargs = {
         "model": "qwen-plus",
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": prompt},
-        ],
+        "messages": messages,
+        "result_format": "message",
     }
-    if api_key:
-        kwargs["api_key"] = api_key
+    api_key_to_use = api_key or os.getenv("DASHSCOPE_API_KEY")
+    if api_key_to_use:
+        kwargs["api_key"] = api_key_to_use
+        
+    response = Generation.call(**kwargs)
 
-    response = dashscope.Generation.call(**kwargs)
     if response.status_code == 200:
         output = response.output
         # qwen-plus 返回 output.text，qwen3-max 返回 output.choices[0].message.content

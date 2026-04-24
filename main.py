@@ -15,6 +15,7 @@ from steps.extract_audio import extract_full_audio, split_audio_by_segments, spl
 from steps.transcribe import transcribe_audio
 from steps.summarize import summarize_transcripts
 from steps.match_ppt import process_filtered_frames, process_segments
+from steps.overlay_camera import overlay_camera_block
 from steps.ppt_to_images import pdf_to_images
 from steps.generate_document import generate_document
 
@@ -67,12 +68,20 @@ def main():
     print(f"  提取了 {len(frame_paths)} 帧, 计算了 {n_pairs} 对相似度 ({time.time()-t0:.1f}s)")
 
     # ========== Step 2: 去重 + PPT 页面切分 ==========
+    # ========== Step 2.1: 遮挡左下角摄像头 ==========
     print(f"\n{'='*60}")
-    print("Step 2: 去重 + 按 PPT 页面切分")
+    print("Step 2.1: 遮挡 filtered 帧左下角摄像头区域")
+    print(f"{'='*60}")
+    t0 = time.time()
+    n_overlaid = overlay_camera_block(str(frames_dir))
+    print(f"  处理了 {n_overlaid} 帧 ({time.time()-t0:.1f}s)")
+
+    print(f"\n{'='*60}")
+    print("Step 2.2: 去重 + 按 PPT 页面切分")
     print(f"{'='*60}")
     t0 = time.time()
     segments, segment_time_ranges = deduplicate_and_segment(
-        str(csv_path), str(frames_dir), str(filtered_dir), str(segments_dir), dup_threshold=0.8, threshold_low=0.6, min_gap=15, min_duration_s=60
+        str(csv_path), str(frames_dir), str(filtered_dir), str(segments_dir), dup_threshold=0.8, threshold_low=0.6, min_gap=15, min_duration_s=180
     )
     print(f"  切分为 {len(segments)} 个页面 ({time.time()-t0:.1f}s)")
     for i, seg in enumerate(segments):
