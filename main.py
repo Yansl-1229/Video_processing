@@ -18,6 +18,7 @@ from steps.match_ppt import process_filtered_frames, process_segments
 from steps.overlay_camera import overlay_camera_block
 from steps.ppt_to_images import pdf_to_images
 from steps.generate_document import generate_document
+from steps.generate_multimodal_segment import generate_multimodal_segments
 
 
 def get_video_duration(video_path):
@@ -185,6 +186,14 @@ def main():
     summarize_segments(segments_dir, api_key=api_key)
     print(f"  逐页知识点提取完成 ({time.time()-t0:.1f}s)")
 
+    # ========== Step 6.5: 生成图文并茂的 segment 摘要 ==========
+    print(f"\n{'='*60}")
+    print("Step 6.5: 生成图文并茂的 segment 摘要 (qwen3.6-flash)")
+    print(f"{'='*60}")
+    t0 = time.time()
+    generate_multimodal_segments(str(segments_dir), api_key=api_key)
+    print(f"  图文 segment 摘要生成完成 ({time.time()-t0:.1f}s)")
+
     # ========== Step 7: 生成多模态文档 ==========
     print(f"\n{'='*60}")
     print("Step 7: 生成多模态课程文档")
@@ -205,6 +214,7 @@ def main():
     print(f"  全部转录:    {all_transcripts_path}")
     print(f"  课程总结:    {summary_path}")
     print(f"  逐页知识点:  segments/*/segment_summary.md")
+    print(f"  图文摘要:    segments/*/segment_summary_with_images.md")
     print(f"  多模态文档:  {doc_path}")
 
 
